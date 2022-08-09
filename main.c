@@ -2,22 +2,8 @@
 #include  <stdlib.h>
 #include <stdint.h>
 
-#define FRAME_HORIZONTAL	(4096)
-#define FRAME_VERTICAL		(2160)
+#include "rgb2ycbcr.h"
 
-int conv_frame(uint8_t *rgb, double *ycbcr){
-	for (int i=0;i< FRAME_HORIZONTAL*FRAME_VERTICAL;i++) {
-		//y
-		ycbcr[(i*3)] = 0.2126 * rgb[(i*3) ] + 0.7152 * rgb[(i*3)+1] + 0.0722 * rgb[(i*3)+2];
-
-		//cb
-		ycbcr[(i*3)+1] = 0.114572 * rgb[(i*3) ] - 0.385428 * rgb[(i*3)+1] + 0.5 * rgb[(i*3)+2];
-
-		//cb
-		ycbcr[(i*3)+1] = 0.5 * rgb[(i*3) ] - 0.454153 * rgb[(i*3)+1] + 0.045847 * rgb[(i*3)+2];
-		
-	}
-}
 
 int conv_file(FILE *input, FILE *output)
 {
@@ -32,18 +18,15 @@ int conv_file(FILE *input, FILE *output)
 		printf("%s %d\n", __func__, __LINE__);
 		return  -1;
 	}
-	size_t readsize = fread(&inbuf, 1, FRAME_HORIZONTAL*FRAME_VERTICAL*3, input);
+	size_t readsize = fread(inbuf, 1, FRAME_HORIZONTAL*FRAME_VERTICAL*3, input);
 	if (readsize != FRAME_HORIZONTAL*FRAME_VERTICAL*3) {
-		printf("%s %d\n", __func__, __LINE__);
+		printf("%s %d %d\n", __func__, __LINE__, (int)readsize);
 		return  -1;
 	}
 
-	int ret = conv_frame(inbuf, outbuf);
-	if (ret < 0) {
-		printf("%s %d\n", __func__, __LINE__);
-		return  -1;
-	}
-	size_t writesize = fwrite(&outbuf, 1, FRAME_HORIZONTAL*FRAME_VERTICAL*3*sizeof(double), output);
+	rgb2ycbcr(inbuf, outbuf);
+//	printf("%d\n", sizeof(double));
+	size_t writesize = fwrite(outbuf, 1, FRAME_HORIZONTAL*FRAME_VERTICAL*3*sizeof(double), output);
 	if (writesize != FRAME_HORIZONTAL*FRAME_VERTICAL*3*sizeof(double)) {
         printf("fwrite err %s %d %d\n",__func__, __LINE__, (int)writesize);
 		return -1;
@@ -77,6 +60,7 @@ int main(int argc, char** argv[])
 	int ret = conv_file(input, output);
 	if (ret < 0) {
 		printf("ng\n");
+		return -1;
 	}
 
 	fclose(input);
